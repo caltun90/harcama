@@ -21,45 +21,62 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 ::-webkit-scrollbar-track{background:var(--bg)}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 
-/* LAYOUT */
-.app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
-@media(max-width:768px){.app{grid-template-columns:1fr}.sidebar{display:none}}
+/* LAYOUT — tam mobil, tek kolon */
+.app{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
 
-/* SIDEBAR */
-.sidebar{background:var(--bg2);border-right:1px solid var(--border);padding:24px 0;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
-.sidebar-logo{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:14px}
+/* DRAWER OVERLAY */
+.drawer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;backdrop-filter:blur(2px)}
+.drawer-overlay.open{display:block}
+
+/* SIDEBAR — slide-out drawer */
+.sidebar{
+  position:fixed;left:0;top:0;bottom:0;width:260px;
+  background:var(--bg2);border-right:1px solid var(--border);
+  padding:0;display:flex;flex-direction:column;
+  z-index:201;overflow-y:auto;
+  transform:translateX(-100%);transition:transform .25s ease;
+}
+.sidebar.open{transform:translateX(0)}
+.sidebar-logo{padding:18px 20px 16px;border-bottom:1px solid var(--border);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
 .sidebar-logo .title{font-size:17px;font-weight:700;letter-spacing:-0.3px}
 .sidebar-logo .title span{color:var(--accent)}
 .sidebar-logo .subtitle{font-size:10px;color:var(--muted);margin-top:3px;letter-spacing:0.5px;text-transform:uppercase}
+.sidebar-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px;line-height:1}
 .nav-section{padding:0 12px 8px;margin-top:4px}
 .nav-label{font-size:9px;font-weight:600;color:var(--muted2);letter-spacing:1px;text-transform:uppercase;padding:0 8px;margin-bottom:6px}
-.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);transition:all .15s;border:none;background:none;width:100%;text-align:left}
+.nav-item{display:flex;align-items:center;gap:10px;padding:11px 10px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;color:var(--muted);transition:all .15s;border:none;background:none;width:100%;text-align:left}
 .nav-item:hover{background:var(--bg3);color:var(--text)}
 .nav-item.active{background:linear-gradient(135deg,#1a3a6a,#0f2a50);color:var(--accent);font-weight:600}
-.nav-item .ni{font-size:16px;width:22px;text-align:center}
+.nav-item .ni{font-size:18px;width:24px;text-align:center}
 .sidebar-cards{padding:16px 12px;border-top:1px solid var(--border);margin-top:auto}
 .sidebar-card-label{font-size:9px;font-weight:600;color:var(--muted2);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
-.mini-card{padding:8px 10px;border-radius:8px;margin-bottom:6px;cursor:pointer;border:1px solid transparent;transition:all .15s}
+.mini-card{padding:10px 12px;border-radius:8px;margin-bottom:6px;cursor:pointer;border:1px solid transparent;transition:all .15s}
 .mini-card.adios{background:#0d2040;border-color:#1a3d6e}
 .mini-card.crystal{background:#1a0d35;border-color:#3d1d7a}
 .mini-card:hover{transform:translateX(2px)}
-.mini-card .mc-name{font-size:10px;font-weight:600}
+.mini-card .mc-name{font-size:11px;font-weight:600}
 .mini-card.adios .mc-name{color:#58a6ff}
 .mini-card.crystal .mc-name{color:#a78bfa}
 .mini-card .mc-num{font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace}
 
 /* MAIN */
-.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
 
-/* TOP BAR */
-.top-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:100}
-.search-box{flex:1;min-width:160px;max-width:280px;position:relative}
+/* TOP BAR — sabit, her zaman üstte */
+.top-bar{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:10px 14px;display:flex;align-items:center;gap:8px;
+  position:sticky;top:0;z-index:100;flex-shrink:0;flex-wrap:nowrap;
+}
+.hamburger{background:none;border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:18px;cursor:pointer;padding:6px 9px;line-height:1;flex-shrink:0;transition:background .15s}
+.hamburger:hover{background:var(--bg3)}
+.search-box{flex:1;min-width:0;position:relative}
 .search-box input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:7px 10px 7px 30px;color:var(--text);font-family:'Sora',sans-serif;font-size:12px;outline:none;transition:border-color .2s}
 .search-box input:focus{border-color:var(--accent)}
 .search-box input::placeholder{color:var(--muted)}
 .search-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px}
 .filter-group{display:flex;background:var(--bg3);border:1px solid var(--border);border-radius:8px;overflow:hidden;flex-shrink:0}
-.filter-btn{padding:6px 12px;border:none;background:transparent;color:var(--muted);cursor:pointer;font-family:'Sora',sans-serif;font-size:11px;font-weight:500;transition:all .15s;white-space:nowrap}
+.filter-btn{padding:6px 10px;border:none;background:transparent;color:var(--muted);cursor:pointer;font-family:'Sora',sans-serif;font-size:11px;font-weight:500;transition:all .15s;white-space:nowrap}
 .filter-btn.active{background:var(--accent);color:#fff;font-weight:600}
 .filter-btn:hover:not(.active){background:var(--bg4);color:var(--text)}
 
@@ -74,8 +91,8 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 /* year separator */
 .month-year-sep{font-size:9px;font-weight:700;color:var(--muted2);letter-spacing:1px;text-transform:uppercase;padding:0 10px;align-self:center;white-space:nowrap}
 
-/* CONTENT */
-.content{padding:18px 20px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1}
+/* CONTENT — scrollable alan */
+.content{padding:14px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch}
 
 /* KPI */
 .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
@@ -197,11 +214,17 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 <body>
 <div class="app">
 
-<!-- SIDEBAR -->
-<aside class="sidebar">
+<!-- DRAWER OVERLAY -->
+<div class="drawer-overlay" id="drawerOverlay"></div>
+
+<!-- SIDEBAR — slide-out drawer -->
+<aside class="sidebar" id="sidebar">
   <div class="sidebar-logo">
-    <div class="title">💳 Harcama <span>Analizi</span></div>
-    <div class="subtitle" id="dataStatus"><span class="status-dot"></span>Statik veri</div>
+    <div>
+      <div class="title">💳 Harcama <span>Analizi</span></div>
+      <div class="subtitle" id="dataStatus"><span class="status-dot"></span>Statik veri</div>
+    </div>
+    <button class="sidebar-close" id="sidebarClose">✕</button>
   </div>
   <div class="nav-section">
     <div class="nav-label">Görünüm</div>
@@ -226,17 +249,19 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 
 <!-- MAIN -->
 <div class="main">
-  <!-- Top bar: search + card filter -->
+  <!-- Top bar: hamburger + search + card filter — HEP SABIT -->
   <div class="top-bar">
+    <button class="hamburger" id="hamburgerBtn">☰</button>
     <div class="search-box">
       <span class="search-icon">🔍</span>
-      <input type="text" id="searchInput" placeholder="Ara... (Allianz, Apple, Spotify)">
+      <input type="text" id="searchInput" placeholder="Ara... (Allianz, Apple...)">
     </div>
     <div class="filter-group" id="cardFilter">
-      <button class="filter-btn active" data-card="all">Her İkisi</button>
+      <button class="filter-btn active" data-card="all">İkisi</button>
       <button class="filter-btn" data-card="adios">Adios</button>
       <button class="filter-btn" data-card="crystal">Crystal</button>
     </div>
+  </div>
   </div>
 
   <!-- Month strip — built dynamically -->
@@ -963,6 +988,21 @@ document.getElementById('searchInput').addEventListener('input',function(){
     <div style="display:flex;flex-direction:column;gap:4px">${rows}</div>`;
 });
 
+// ─── DRAWER ───────────────────────────────────────────────────────────────
+function openDrawer(){
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('drawerOverlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeDrawer(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('open');
+  document.body.style.overflow='';
+}
+document.getElementById('hamburgerBtn').addEventListener('click', openDrawer);
+document.getElementById('sidebarClose').addEventListener('click', closeDrawer);
+document.getElementById('drawerOverlay').addEventListener('click', closeDrawer);
+
 // ─── EVENTS ───────────────────────────────────────────────────────────────
 document.getElementById('cardFilter').addEventListener('click',e=>{
   const btn=e.target.closest('.filter-btn');
@@ -979,6 +1019,7 @@ document.querySelectorAll('.nav-item').forEach(btn=>{
     this.classList.add('active');
     currentView=this.dataset.view;
     document.getElementById('searchInput').value='';
+    closeDrawer();
     renderView();
   });
 });
@@ -990,6 +1031,7 @@ document.querySelectorAll('.mini-card').forEach(card=>{
     document.querySelectorAll('#cardFilter .filter-btn').forEach(b=>{
       b.classList.toggle('active',b.dataset.card===selCard||(selCard==='all'&&b.dataset.card==='all'));
     });
+    closeDrawer();
     renderView();
   });
 });

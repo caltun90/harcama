@@ -1215,7 +1215,7 @@ async function parsePDF(file){
   const prompt=`Bu bir kredi kartı hesap özeti PDF'i. Tüm işlemleri çıkar ve JSON array olarak döndür.
 
 ÖNEMLİ KURALLAR:
-1. ym (dönem): Bu ekstrenin hesap kesim tarihi hangi aydaysa o ayı yaz. Örneğin kesim tarihi "20 Mart 2026" ise TÜM işlemler için ym="2026-03" yaz. İşlem tarihine bakma, ekstrenin ait olduğu aya bak.
+1. ym (dönem): PDF'in başındaki "Hesap Kesim Tarihi"ne bak — Son Ödeme Tarihi değil, HesapKESİM tarihi. Örneğin "Hesap Kesim Tarihi: 24 Şubat 2026" ise ym="2026-02", "Hesap Kesim Tarihi: 20 Mart 2026" ise ym="2026-03". Bu değeri TÜM işlemler için kullan, hiçbir işlemin kendi tarihine bakma.
 2. card: Kart numarasına bak. 2929 ile bitiyorsa "adios", 8199 ile bitiyorsa "crystal"
 3. name: Kısa ve temiz işyeri adı (taksit bilgisini de ekle, örn: "Allianz Sigorta 9/9")
 4. cat: Aşağıdaki listeden birini seç

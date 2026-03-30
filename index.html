@@ -1212,18 +1212,18 @@ document.getElementById('parseBtn').addEventListener('click', async()=>{
 async function parsePDF(file){
   const base64=await fileToBase64(file);
   const key=getKey();
-  const prompt=`Bu bir Yapı Kredi kredi kartı hesap özeti PDF'i. Tüm işlemleri çıkar ve JSON array olarak döndür.
+  const prompt=`Bu bir kredi kartı hesap özeti PDF'i. Tüm işlemleri çıkar ve JSON array olarak döndür.
 
 Kural:
 - Sadece gerçek alışveriş/ödeme işlemlerini al (ödeme girişleri, faiz, ücretler dahil)
 - Otomatik ödeme talimatı transferlerini ve önceki dönem borçlarını ALMA
-- Her işlem için: ym (YYYY-MM formatında, hesap kesim tarihi değil işlem tarihi), card (adios veya crystal — kart numarasından: 2929=adios, 8199=crystal), name (işyeri adı, kısa ve temiz), cat (aşağıdan biri), amt (TL tutarı, iade ise negatif)
+- Her işlem için: ym (YYYY-MM formatında — HER ZAMAN bu ekstrenin ait olduğu dönemi yaz, orijinal alışveriş tarihini değil. Taksitli işlemlerde bile ekstrenin kesim ayını kullan), card (adios veya crystal — kart numarasından: 2929=adios, 8199=crystal), name (işyeri adı, kısa ve temiz, taksit bilgisini de ekle örn: "Allianz Sigorta (7/9)"), cat (aşağıdan biri), amt (TL tutarı, iade ise negatif)
 
 Kategoriler (sadece bunları kullan, tam bu string):
 Sigorta & Emeklilik, Konut & Aidat, Dijital & Abonelik, Iletisim, Ulasim, Alisveris, Giyim, Seyahat, Faiz & Ucret, Nakit & Transfer, Vergi, Diger
 
 Sadece JSON array döndür, başka hiçbir şey yazma:
-[{"ym":"2026-01","card":"adios","name":"Allianz Sigorta","cat":"Sigorta & Emeklilik","amt":11167.00}]`;
+[{"ym":"2026-03","card":"adios","name":"Allianz Sigorta (9/9)","cat":"Sigorta & Emeklilik","amt":2821.23}]`;
 
   const res=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',

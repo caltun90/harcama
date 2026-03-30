@@ -1214,16 +1214,21 @@ async function parsePDF(file){
   const key=getKey();
   const prompt=`Bu bir kredi kartı hesap özeti PDF'i. Tüm işlemleri çıkar ve JSON array olarak döndür.
 
-Kural:
-- Sadece gerçek alışveriş/ödeme işlemlerini al (ödeme girişleri, faiz, ücretler dahil)
-- Otomatik ödeme talimatı transferlerini ve önceki dönem borçlarını ALMA
-- Her işlem için: ym (YYYY-MM formatında — HER ZAMAN bu ekstrenin ait olduğu dönemi yaz, orijinal alışveriş tarihini değil. Taksitli işlemlerde bile ekstrenin kesim ayını kullan), card (adios veya crystal — kart numarasından: 2929=adios, 8199=crystal), name (işyeri adı, kısa ve temiz, taksit bilgisini de ekle örn: "Allianz Sigorta (7/9)"), cat (aşağıdan biri), amt (TL tutarı, iade ise negatif)
+ÖNEMLİ KURALLAR:
+1. ym (dönem): Bu ekstrenin hesap kesim tarihi hangi aydaysa o ayı yaz. Örneğin kesim tarihi "20 Mart 2026" ise TÜM işlemler için ym="2026-03" yaz. İşlem tarihine bakma, ekstrenin ait olduğu aya bak.
+2. card: Kart numarasına bak. 2929 ile bitiyorsa "adios", 8199 ile bitiyorsa "crystal"
+3. name: Kısa ve temiz işyeri adı (taksit bilgisini de ekle, örn: "Allianz Sigorta 9/9")
+4. cat: Aşağıdaki listeden birini seç
+5. amt: TL tutarı (iade/iptal ise negatif)
 
-Kategoriler (sadece bunları kullan, tam bu string):
+DAHIL ET: Alışverişler, fatura ödemeleri, sigorta, faiz, kart ücreti, taksitler, nakit avans, vergi
+DAHIL ETME: "ÖNCEKİ DÖNEM HESAP ÖZETİ BORCU" satırı, ödeme girişleri (+ işaretli ÖDEME-İNTERNET BANKACILIĞI), hesap özeti erteleme çifti (aynı tutarın hem + hem - göründüğü satırlar)
+
+Kategoriler:
 Sigorta & Emeklilik, Konut & Aidat, Dijital & Abonelik, Iletisim, Ulasim, Alisveris, Giyim, Seyahat, Faiz & Ucret, Nakit & Transfer, Vergi, Diger
 
-Sadece JSON array döndür, başka hiçbir şey yazma:
-[{"ym":"2026-03","card":"adios","name":"Allianz Sigorta (9/9)","cat":"Sigorta & Emeklilik","amt":2821.23}]`;
+SADECE JSON array döndür, başka hiçbir şey yazma:
+[{"ym":"2026-03","card":"adios","name":"Allianz Sigorta 9/9","cat":"Sigorta & Emeklilik","amt":2821.23}]`;
 
   const res=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
@@ -1235,7 +1240,7 @@ Sadece JSON array döndür, başka hiçbir şey yazma:
     },
     body:JSON.stringify({
       model:'claude-sonnet-4-20250514',
-      max_tokens:4000,
+      max_tokens:8000,
       messages:[{role:'user',content:[
         {type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},
         {type:'text',text:prompt}

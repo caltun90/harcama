@@ -62,14 +62,14 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 /* MAIN */
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
 
-/* TOP BAR — sabit, her zaman üstte */
+/* TOP BAR — tamamen sabit */
 .top-bar{
   background:var(--bg2);border-bottom:1px solid var(--border);
   padding:10px 14px;display:flex;align-items:center;gap:8px;
-  position:sticky;top:0;z-index:100;flex-shrink:0;flex-wrap:nowrap;
+  position:fixed;top:0;left:0;right:0;z-index:100;flex-wrap:nowrap;
 }
 .hamburger{background:none;border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:18px;cursor:pointer;padding:6px 9px;line-height:1;flex-shrink:0;transition:background .15s}
-.hamburger:hover{background:var(--bg3)}
+.hamburger:hover,.hamburger:active{background:var(--bg3)}
 .search-box{flex:1;min-width:0;position:relative}
 .search-box input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:7px 10px 7px 30px;color:var(--text);font-family:'Sora',sans-serif;font-size:12px;outline:none;transition:border-color .2s}
 .search-box input:focus{border-color:var(--accent)}
@@ -80,19 +80,23 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 .filter-btn.active{background:var(--accent);color:#fff;font-weight:600}
 .filter-btn:hover:not(.active){background:var(--bg4);color:var(--text)}
 
-/* MONTH STRIP — dynamic, scrollable */
-.month-strip-wrap{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 20px;overflow-x:auto;display:flex;align-items:center;gap:0;scrollbar-width:none}
+/* MONTH STRIP — top-bar'ın hemen altında sabit */
+.month-strip-wrap{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:0 14px;overflow-x:auto;display:flex;align-items:center;
+  scrollbar-width:none;
+  position:fixed;top:49px;left:0;right:0;z-index:99;
+}
 .month-strip-wrap::-webkit-scrollbar{display:none}
-.month-strip{display:flex;gap:2px;padding:8px 0;width:max-content}
-.month-btn{padding:5px 12px;border-radius:6px;border:none;background:transparent;color:var(--muted);cursor:pointer;font-family:'Sora',sans-serif;font-size:12px;font-weight:500;white-space:nowrap;transition:all .15s;position:relative}
+.month-strip{display:flex;gap:2px;padding:7px 0;width:max-content}
+.month-btn{padding:5px 12px;border-radius:6px;border:none;background:transparent;color:var(--muted);cursor:pointer;font-family:'Sora',sans-serif;font-size:12px;font-weight:500;white-space:nowrap;transition:all .15s}
 .month-btn:hover:not(.active){background:var(--bg3);color:var(--text)}
-.month-btn.active{background:var(--accent);color:#fff;font-weight:600;border-radius:6px}
+.month-btn.active{background:var(--accent);color:#fff;font-weight:600}
 .month-btn.all-btn{margin-right:8px;border-right:1px solid var(--border);padding-right:14px}
-/* year separator */
 .month-year-sep{font-size:9px;font-weight:700;color:var(--muted2);letter-spacing:1px;text-transform:uppercase;padding:0 10px;align-self:center;white-space:nowrap}
 
-/* CONTENT — scrollable alan */
-.content{padding:14px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch}
+/* CONTENT — fixed bar'ların altından başlasın */
+.content{padding:14px;padding-top:108px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;height:100vh;height:100dvh;-webkit-overflow-scrolling:touch;}
 
 /* KPI */
 .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}

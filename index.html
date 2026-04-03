@@ -94,8 +94,16 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 .month-btn.all-btn{margin-right:8px;border-right:1px solid var(--border);padding-right:14px}
 .month-year-sep{font-size:9px;font-weight:700;color:var(--muted2);letter-spacing:1px;text-transform:uppercase;padding:0 8px;align-self:center;white-space:nowrap}
 
-/* CONTENT */
+/* QUICK FILTER STRIP */
+.quick-filter-wrap{background:var(--bg);border-bottom:1px solid var(--border);padding:0 14px;overflow-x:auto;display:flex;align-items:center;scrollbar-width:none;position:fixed;top:83px;left:0;right:0;z-index:98}
+.quick-filter-wrap::-webkit-scrollbar{display:none}
+.quick-filter-strip{display:flex;gap:6px;padding:6px 0;width:max-content}
+.qf-btn{padding:4px 11px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:'Sora',sans-serif;font-size:11px;font-weight:500;white-space:nowrap;transition:all .15s}
+.qf-btn:active,.qf-btn.active{background:var(--bg3);color:var(--text);border-color:var(--border2)}
+
+/* CONTENT — quick filter varsa daha aşağıdan başla */
 .content{padding:14px;padding-top:105px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch;padding-bottom:90px}
+.content.with-quick{padding-top:136px}
 
 /* FAB — PDF yükle butonu */
 .fab{position:fixed;bottom:24px;right:20px;z-index:150;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#1a6fd4);border:none;color:#fff;font-size:24px;cursor:pointer;box-shadow:0 4px 20px rgba(61,155,255,.5);display:flex;align-items:center;justify-content:center;transition:all .2s}
@@ -333,16 +341,19 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
       <span class="search-icon">🔍</span>
       <input type="text" id="searchInput" placeholder="Ara... (Allianz, Apple...)">
     </div>
-    <div class="filter-group" id="cardFilter">
+    <div class="filter-group" id="cardFilter" style="display:none">
       <button class="filter-btn active" data-card="all">İkisi</button>
-      <button class="filter-btn" data-card="adios">Adios</button>
-      <button class="filter-btn" data-card="crystal">Crystal</button>
+      <button class="filter-btn" data-card="adios" id="cfAdios">Adios</button>
+      <button class="filter-btn" data-card="crystal" id="cfCrystal">Crystal</button>
     </div>
   </div>
 
-  <!-- MONTH STRIP -->
+  <!-- MONTH STRIP + QUICK FILTERS -->
   <div class="month-strip-wrap">
     <div class="month-strip" id="monthStrip"></div>
+  </div>
+  <div class="quick-filter-wrap" id="quickFilterWrap" style="display:none">
+    <div class="quick-filter-strip" id="quickFilterStrip"></div>
   </div>
 
   <div class="content" id="mainContent"></div>
@@ -455,6 +466,7 @@ function initSetup(){
 function startApp(){
   updateTxCount();
   buildMonthStrip();
+  buildQuickFilters();
   renderView();
   bindEvents();
 }
@@ -462,16 +474,26 @@ function startApp(){
 function updateTxCount(){
   const n=TX.filter(t=>t.amt>0).length;
   document.getElementById('txCount').textContent=`${n} işlem kayıtlı`;
-  // Kartları sadece o kartta veri varsa göster
+
   const hasAdios=TX.some(t=>t.card==='adios');
   const hasCrystal=TX.some(t=>t.card==='crystal');
+  const hasBoth=hasAdios&&hasCrystal;
+
+  // Sidebar mini kartlar
   document.getElementById('cardAdios').style.display=hasAdios?'block':'none';
   document.getElementById('cardCrystal').style.display=hasCrystal?'block':'none';
-  // Card filter butonlarını da güncelle
+
+  // Top bar card filter — sadece iki kart varsa göster
   const cf=document.getElementById('cardFilter');
   if(cf){
-    cf.querySelector('[data-card="adios"]').style.display=hasAdios?'':'none';
-    cf.querySelector('[data-card="crystal"]').style.display=hasCrystal?'':'none';
+    cf.style.display=hasBoth?'flex':'none';
+    // "İkisi" butonu sadece iki kart varsa anlamlı
+    const allBtn=cf.querySelector('[data-card="all"]');
+    if(allBtn) allBtn.style.display=hasBoth?'':'none';
+    // Tek kart varsa o kartı otomatik seç, filtre butonunu gizle
+    if(!hasBoth){
+      selCard=hasAdios?'adios':hasCrystal?'crystal':'all';
+    }
   }
 }
 
@@ -483,8 +505,9 @@ function getPeriods(){
 }
 
 function filtered(){
+  const qyms=getQuickFilteredYMs();
   return TX.filter(t=>
-    (selYM==='all'||t.ym===selYM)&&
+    (qyms?qyms.includes(t.ym):(selYM==='all'||t.ym===selYM))&&
     (selCard==='all'||t.card===selCard)&&
     t.amt>0
   );
@@ -509,6 +532,69 @@ function totalsByPeriod(periods){
 }
 
 // ═══════════════════════════════════════════════════════════════
+// QUICK FILTERS
+// ═══════════════════════════════════════════════════════════════
+let selQuick = null; // aktif hızlı filtre
+
+function buildQuickFilters(){
+  const periods=getPeriods();
+  const wrap=document.getElementById('quickFilterWrap');
+  const strip=document.getElementById('quickFilterStrip');
+  const content=document.getElementById('mainContent');
+  if(!wrap||!strip)return;
+
+  if(periods.length<2){wrap.style.display='none';content.classList.remove('with-quick');return;}
+
+  wrap.style.display='flex';
+  content.classList.add('with-quick');
+
+  // Son N ay hesapla
+  const sorted=[...periods].sort().reverse(); // en yeni önce
+  const makeRange=(n)=>{
+    if(sorted.length<n) return null;
+    return sorted.slice(0,n);
+  };
+
+  const filters=[
+    {label:'Son 2 ay',  yms:makeRange(2)},
+    {label:'Son 3 ay',  yms:makeRange(3)},
+    {label:'Son 6 ay',  yms:makeRange(6)},
+    {label:'Son 12 ay', yms:makeRange(12)},
+    {label:'Bu yıl',    yms:periods.filter(y=>y.startsWith(new Date().getFullYear().toString()))},
+    {label:'Geçen yıl', yms:periods.filter(y=>y.startsWith((new Date().getFullYear()-1).toString()))},
+  ].filter(f=>f.yms&&f.yms.length>0&&f.yms.length<periods.length);
+
+  strip.innerHTML=`<button class="qf-btn${!selQuick?' active':''}" data-qf="all">Tümü</button>`+
+    filters.map(f=>`<button class="qf-btn${selQuick===f.label?' active':''}" data-qf="${f.label}" data-yms="${f.yms.join(',')}">${f.label}</button>`).join('');
+
+  strip.querySelectorAll('.qf-btn').forEach(btn=>{
+    btn.addEventListener('click',function(){
+      const qf=this.dataset.qf;
+      if(qf==='all'){
+        selQuick=null;
+        selYM='all';
+      } else {
+        selQuick=qf;
+        selYM='all'; // ay filtresini sıfırla, quick filter devralır
+      }
+      buildMonthStrip();
+      buildQuickFilters();
+      renderView();
+    });
+  });
+}
+
+// Quick filter aktifse TX'i filtrele
+function getQuickFilteredYMs(){
+  if(!selQuick) return null;
+  const strip=document.getElementById('quickFilterStrip');
+  if(!strip) return null;
+  const btn=strip.querySelector(`[data-qf="${selQuick}"]`);
+  if(!btn) return null;
+  return btn.dataset.yms?btn.dataset.yms.split(','):null;
+}
+
+// ═══════════════════════════════════════════════════════════════
 // MONTH STRIP
 // ═══════════════════════════════════════════════════════════════
 function buildMonthStrip(){
@@ -525,7 +611,9 @@ function buildMonthStrip(){
   strip.querySelectorAll('.month-btn').forEach(btn=>{
     btn.addEventListener('click',function(){
       selYM=this.dataset.ym;
+      selQuick=null; // quick filter'ı sıfırla
       buildMonthStrip();
+      buildQuickFilters();
       renderView();
       this.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});
     });
@@ -1193,6 +1281,7 @@ document.getElementById('parseBtn').addEventListener('click', async()=>{
     saveTX(TX);
     updateTxCount();
     buildMonthStrip();
+    buildQuickFilters();
     statusMsg.className='status-msg success';
     statusMsg.textContent=`✅ ${unique.length} yeni işlem eklendi${unique.length<allNew.length?` (${allNew.length-unique.length} tekrar atlandı)`:''}`;
     setTimeout(()=>{

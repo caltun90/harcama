@@ -1049,8 +1049,11 @@ function initCarousel(){
 // TRANSACTIONS
 // ═══════════════════════════════════════════════════════════════
 function renderTransactions(){
-  const txs=TX.filter(t=>(selYM==='all'||t.ym===selYM)&&(selCard==='all'||t.card===selCard))
-    .sort((a,b)=>a.ym.localeCompare(b.ym)||b.amt-a.amt);
+  const qyms=getQuickFilteredYMs();
+  const txs=TX.filter(t=>
+    (qyms?qyms.includes(t.ym):(selYM==='all'||t.ym===selYM))&&
+    (selCard==='all'||t.card===selCard)
+  ).sort((a,b)=>a.ym.localeCompare(b.ym)||b.amt-a.amt);
   const pos=txs.filter(t=>t.amt>0).reduce((s,t)=>s+t.amt,0);
   const rows=txs.map(t=>{
     const cls=t.card==='adios'?'tx-card-adios':'tx-card-crystal';
@@ -1078,7 +1081,7 @@ function renderTransactions(){
 // SUBSCRIPTIONS
 // ═══════════════════════════════════════════════════════════════
 function renderSubscriptions(){
-  const allTx=TX.filter(t=>t.amt>0&&t.cat==='Dijital & Abonelik');
+  const allTx=filtered().filter(t=>t.cat==='Dijital & Abonelik');
   const subMap={};
   allTx.forEach(t=>{
     const key=t.name.replace(/\s*\(.*?\)/g,'').replace(/\s+\d+$/,'').trim();

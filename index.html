@@ -930,20 +930,53 @@ function renderDashboard(){
 function buildDonut(cats,total){
   const ctx=document.getElementById('donutChart');if(!ctx)return;
   if(donutChart){donutChart.destroy();donutChart=null;}
+
+  // Halka dilimlerinin içine yüzde yazan inline plugin
+  const donutLabelPlugin={
+    id:'donutLabels',
+    afterDatasetsDraw(chart){
+      const {ctx:c,data}=chart;
+      const meta=chart.getDatasetMeta(0);
+      const sum=data.datasets[0].data.reduce((s,v)=>s+v,0);
+      if(!sum)return;
+      c.save();
+      meta.data.forEach((arc,i)=>{
+        const value=data.datasets[0].data[i];
+        const pct=(value/sum)*100;
+        if(pct<6)return; // çok ince dilimlere yazma
+        const props=arc.getProps(['x','y','startAngle','endAngle','innerRadius','outerRadius'],true);
+        const mid=(props.startAngle+props.endAngle)/2;
+        const r=(props.innerRadius+props.outerRadius)/2;
+        const lx=props.x+Math.cos(mid)*r;
+        const ly=props.y+Math.sin(mid)*r;
+        c.fillStyle='#fff';
+        c.font=`700 ${pct<10?11:13}px Sora, sans-serif`;
+        c.textAlign='center';
+        c.textBaseline='middle';
+        c.fillText(`${pct.toFixed(0)}%`,lx,ly);
+      });
+      c.restore();
+    }
+  };
+
   donutChart=new Chart(ctx,{
     type:'doughnut',
     data:{labels:cats.map(b=>catLabel(b.cat)),datasets:[{
       data:cats.map(b=>Math.max(b.total,0)),
       backgroundColor:cats.map(b=>catColor(b.cat)),
-      borderColor:'#FFFFFF',borderWidth:3,hoverBorderColor:'#FFFFFF',hoverOffset:8
+      borderWidth:0,
+      borderRadius:8,
+      spacing:4,
+      hoverOffset:10
     }]},
-    options:{cutout:'68%',animation:{animateRotate:true,duration:600},
+    options:{cutout:'68%',animation:{animateRotate:true,animateScale:false,duration:700},
       plugins:{legend:{display:false},
         tooltip:{callbacks:{label:c=>` ${fmt(c.raw)} · ${total>0?((c.raw/total)*100).toFixed(1):0}%`},
           backgroundColor:'#FFFFFF',borderColor:'#E2E8F0',borderWidth:1,
           titleColor:'#0F172A',bodyColor:'#64748B',padding:12,cornerRadius:10,
           titleFont:{family:'Sora',weight:'600'},bodyFont:{family:'Sora'},
-          displayColors:true,boxPadding:4}}}
+          displayColors:true,boxPadding:4}}},
+    plugins:[donutLabelPlugin]
   });
   const lgd=document.getElementById('legend');
   if(lgd)lgd.innerHTML=cats.slice(0,6).map(b=>{

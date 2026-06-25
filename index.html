@@ -285,6 +285,14 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 .settings-row-action button.danger{background:#FEE2E2;border-color:#FCA5A5;color:#DC2626}
 .settings-row-action button.danger:hover{background:#FECACA}
 
+/* MODEL SELECTOR */
+.model-opt{flex:1;padding:13px 10px;border:1.5px solid var(--border);border-radius:12px;background:var(--bg2);cursor:pointer;text-align:center;transition:all .15s;font-family:'Sora',sans-serif}
+.model-opt:active{transform:scale(.98)}
+.model-opt.active{border-color:var(--accent);background:#E0F2FE}
+.model-opt-name{font-weight:600;font-size:13px;color:var(--text)}
+.model-opt.active .model-opt-name{color:#0284C7}
+.model-opt-desc{font-size:9px;color:var(--muted);margin-top:3px}
+
 /* HEATMAP */
 .hm-cell{aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;transition:transform .12s,box-shadow .12s}
 .hm-cell.clickable{cursor:pointer}
@@ -406,11 +414,15 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 // ═══════════════════════════════════════════════════════════════
 const LS_KEY   = 'harcama_tx_v2';
 const LS_KEY_K = 'harcama_api_key';
+const LS_KEY_M = 'harcama_model';
+const DEFAULT_MODEL = 'claude-opus-4-8';
 
 function loadTX(){ try{return JSON.parse(localStorage.getItem(LS_KEY)||'[]')}catch{return[]} }
 function saveTX(arr){ localStorage.setItem(LS_KEY, JSON.stringify(arr)) }
 function getKey(){ return localStorage.getItem(LS_KEY_K)||'' }
 function setKey(k){ localStorage.setItem(LS_KEY_K, k) }
+function getModel(){ return localStorage.getItem(LS_KEY_M)||DEFAULT_MODEL }
+function setModel(m){ localStorage.setItem(LS_KEY_M, m) }
 
 // ═══════════════════════════════════════════════════════════════
 // MERCHANT LOGO SYSTEM — Google favicons + brand color fallback
@@ -1467,7 +1479,30 @@ function renderSettings(){
         </div>
         <div class="settings-row-action"><button id="settingsUploadBtn">Yükle</button></div>
       </div>
+    </div>
+    <div style="font-size:10px;font-weight:600;color:var(--muted);letter-spacing:.7px;text-transform:uppercase;margin-bottom:8px;padding:0 2px">Analiz Modeli</div>
+    <div class="settings-section">
+      <div style="padding:14px 16px;display:flex;gap:8px">
+        <button class="model-opt${getModel()==='claude-opus-4-8'?' active':''}" data-model="claude-opus-4-8">
+          <div class="model-opt-name">Opus 4.8</div>
+          <div class="model-opt-desc">En güçlü · en isabetli</div>
+        </button>
+        <button class="model-opt${getModel()==='claude-sonnet-4-6'?' active':''}" data-model="claude-sonnet-4-6">
+          <div class="model-opt-name">Sonnet 4.6</div>
+          <div class="model-opt-desc">Hızlı · ekonomik</div>
+        </button>
+      </div>
+      <div style="padding:0 16px 14px;font-size:10px;color:var(--muted2);line-height:1.5">
+        Opus karmaşık taksit ve döviz satırlarında daha isabetli ama biraz yavaş. Sonnet hızlı ve ucuz; çoğu hesap özeti için yeterli.
+      </div>
     </div>`;
+
+  document.querySelectorAll('.model-opt').forEach(btn=>{
+    btn.addEventListener('click',function(){
+      setModel(this.dataset.model);
+      renderSettings();
+    });
+  });
 
   document.querySelectorAll('.month-delete-btn').forEach(btn=>{
     btn.addEventListener('click',function(){
@@ -1579,6 +1614,7 @@ document.getElementById('parseBtn').addEventListener('click', async()=>{
   statusMsg.className='status-msg';
 
   let allNew=[];
+  let hadError=false;
   for(let i=0;i<selectedFiles.length;i++){
     const file=selectedFiles[i];
     statusMsg.textContent=`${file.name} analiz ediliyor... (${i+1}/${selectedFiles.length})`;
@@ -1589,6 +1625,7 @@ document.getElementById('parseBtn').addEventListener('click', async()=>{
       console.log(`${file.name}: ${txs.length} işlem bulundu`);
     }catch(e){
       console.error(e);
+      hadError=true;
       statusMsg.className='status-msg error';
       statusMsg.textContent=`Hata: ${file.name} — ${e.message}`;
     }
@@ -1613,6 +1650,9 @@ document.getElementById('parseBtn').addEventListener('click', async()=>{
       document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view==='dashboard'));
       renderView();
     },1800);
+  } else if(hadError){
+    // Gerçek hata mesajı zaten görünüyor, ezme
+    btn.disabled=false;
   } else {
     statusMsg.className='status-msg error';
     statusMsg.textContent='Hiç işlem bulunamadı. PDF doğru mu?';
@@ -1651,7 +1691,7 @@ SADECE JSON array döndür, başka hiçbir şey yazma:
       'anthropic-dangerous-direct-browser-access':'true'
     },
     body:JSON.stringify({
-      model:'claude-sonnet-4-20250514',
+      model:getModel(),
       max_tokens:8000,
       messages:[{role:'user',content:[
         {type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},

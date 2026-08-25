@@ -115,13 +115,22 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 /* CONTENT */
 .content{padding:16px 14px;padding-top:115px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch;padding-bottom:100px}
 .content.with-quick{padding-top:148px}
+/* Kartların ezilmesini engelle — flex çocukları küçülmesin, taşan içerik kaydırılsın */
+.content>*{flex-shrink:0}
 
-/* FAB */
-.fab{position:fixed;bottom:26px;right:22px;z-index:150;width:58px;height:58px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:24px;cursor:pointer;box-shadow:0 6px 20px rgba(14,165,233,.45);display:flex;align-items:center;justify-content:center;transition:all .2s}
-.fab:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(14,165,233,.55)}
+/* FAB — kaydırırken küçülür, durunca yazısıyla açılır */
+.fab{position:fixed;bottom:24px;right:18px;z-index:150;height:48px;padding:0 18px;border-radius:24px;background:var(--accent);border:none;color:#fff;font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 6px 20px rgba(14,165,233,.4);display:flex;align-items:center;gap:8px;transition:width .22s ease,padding .22s ease,border-radius .22s ease}
+.fab .fab-icon{font-size:19px;line-height:1;flex-shrink:0}
+.fab .fab-txt{white-space:nowrap;overflow:hidden;max-width:90px;opacity:1;transition:max-width .22s ease,opacity .16s ease,margin-left .22s ease}
+.fab.mini{padding:0;width:46px;height:46px;border-radius:50%;justify-content:center;gap:0}
+.fab.mini .fab-txt{max-width:0;opacity:0;margin-left:-8px}
 .fab:active{transform:scale(.94)}
-.fab-label{position:fixed;bottom:36px;right:86px;z-index:150;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:6px 11px;font-size:11px;font-weight:600;color:var(--text);pointer-events:none;white-space:nowrap;opacity:0;transition:opacity .2s;box-shadow:var(--shadow)}
-.fab:hover + .fab-label,.fab-label.show{opacity:1}
+
+/* KATEGORİ ROZETİ — işyeri logolarıyla aynı kalıp */
+.cat-badge{display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;flex-shrink:0;line-height:1;letter-spacing:.3px;box-shadow:var(--shadow-sm)}
+
+/* TAKSİT ROZETİ */
+.tx-tk{padding:2px 7px;border-radius:10px;font-size:9px;font-weight:600;background:#E0F2FE;color:#0C4A6E;letter-spacing:.2px}
 
 /* KPI */
 .kpi-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -384,7 +393,7 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
   <div class="content" id="mainContent"></div>
 
   <!-- FAB -->
-  <button class="fab" id="fabBtn" title="Hesap özeti yükle">📄</button>
+  <button class="fab" id="fabBtn" title="Hesap özeti yükle"><span class="fab-icon">📄</span><span class="fab-txt">PDF ekle</span></button>
 </div>
 
 <!-- ── UPLOAD MODAL ── -->
@@ -415,13 +424,27 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 const LS_KEY   = 'harcama_tx_v2';
 const LS_KEY_K = 'harcama_api_key';
 const LS_KEY_M = 'harcama_model';
-const DEFAULT_MODEL = 'claude-opus-4-8';
+const DEFAULT_MODEL = 'claude-opus-5';
+
+// Eski model isimleri artık geçerli değil — kayıtlı seçimi otomatik yükselt
+const MODEL_MIGRATION = {
+  'claude-opus-4-8'  : 'claude-opus-5',
+  'claude-sonnet-4-6': 'claude-sonnet-5',
+  'claude-opus-4-6'  : 'claude-opus-5',
+  'claude-opus-4-5'  : 'claude-opus-5',
+  'claude-sonnet-4-5': 'claude-sonnet-5',
+};
 
 function loadTX(){ try{return JSON.parse(localStorage.getItem(LS_KEY)||'[]')}catch{return[]} }
 function saveTX(arr){ localStorage.setItem(LS_KEY, JSON.stringify(arr)) }
 function getKey(){ return localStorage.getItem(LS_KEY_K)||'' }
 function setKey(k){ localStorage.setItem(LS_KEY_K, k) }
-function getModel(){ return localStorage.getItem(LS_KEY_M)||DEFAULT_MODEL }
+function getModel(){
+  const saved = localStorage.getItem(LS_KEY_M) || DEFAULT_MODEL;
+  const migrated = MODEL_MIGRATION[saved] || saved;
+  if(migrated !== saved) localStorage.setItem(LS_KEY_M, migrated);
+  return migrated;
+}
 function setModel(m){ localStorage.setItem(LS_KEY_M, m) }
 
 // ═══════════════════════════════════════════════════════════════
@@ -551,22 +574,30 @@ function renderMerchantLogo(name,size=40){
 // CAT CONFIG
 // ═══════════════════════════════════════════════════════════════
 const CAT_CFG = {
-  'Sigorta & Emeklilik':{color:'#FB7185',icon:'🛡️',label:'Sigorta & Emeklilik'},
-  'Konut & Aidat':      {color:'#22D3EE',icon:'🏠',label:'Konut & Aidat'},
-  'Dijital & Abonelik': {color:'#60A5FA',icon:'📱',label:'Dijital & Abonelik'},
-  'Iletisim':           {color:'#34D399',icon:'📞',label:'İletişim'},
-  'Ulasim':             {color:'#FBBF24',icon:'🚗',label:'Ulaşım'},
-  'Alisveris':          {color:'#C084FC',icon:'🛍️',label:'Alışveriş'},
-  'Giyim':              {color:'#F472B6',icon:'👗',label:'Giyim'},
-  'Seyahat':            {color:'#FB923C',icon:'✈️',label:'Seyahat'},
-  'Faiz & Ucret':       {color:'#94A3B8',icon:'🏦',label:'Faiz & Ücret'},
-  'Nakit & Transfer':   {color:'#F87171',icon:'💸',label:'Nakit & Transfer'},
-  'Vergi':              {color:'#A78BFA',icon:'📋',label:'Vergi'},
-  'Diger':              {color:'#64748B',icon:'📌',label:'Diğer'},
+  'Sigorta & Emeklilik':{color:'#FB7185',icon:'🛡️',badge:'S',label:'Sigorta & Emeklilik'},
+  'Konut & Aidat':      {color:'#22D3EE',icon:'🏠',badge:'K',label:'Konut & Aidat'},
+  'Dijital & Abonelik': {color:'#60A5FA',icon:'📱',badge:'D',label:'Dijital & Abonelik'},
+  'Iletisim':           {color:'#34D399',icon:'📞',badge:'İ',label:'İletişim'},
+  'Ulasim':             {color:'#FBBF24',icon:'🚗',badge:'U',label:'Ulaşım'},
+  'Alisveris':          {color:'#C084FC',icon:'🛍️',badge:'A',label:'Alışveriş'},
+  'Giyim':              {color:'#F472B6',icon:'👗',badge:'G',label:'Giyim'},
+  'Seyahat':            {color:'#FB923C',icon:'✈️',badge:'S',label:'Seyahat'},
+  'Faiz & Ucret':       {color:'#94A3B8',icon:'🏦',badge:'F',label:'Faiz & Ücret'},
+  'Nakit & Transfer':   {color:'#F87171',icon:'💸',badge:'N',label:'Nakit & Transfer'},
+  'Vergi':              {color:'#A78BFA',icon:'📋',badge:'V',label:'Vergi'},
+  'Diger':              {color:'#64748B',icon:'📌',badge:'Dğ',label:'Diğer'},
 };
 const catLabel = c=>CAT_CFG[c]?.label||c;
 const catColor = c=>CAT_CFG[c]?.color||'#64748B';
 const catIcon  = c=>CAT_CFG[c]?.icon||'📌';
+const catBadge = c=>CAT_CFG[c]?.badge||(catLabel(c).charAt(0)||'?').toUpperCase();
+
+function renderCatBadge(cat,size=38){
+  const txt=catBadge(cat);
+  const radius=Math.round(size*0.26);
+  const fontSize=Math.round(size*(txt.length>1?0.34:0.42));
+  return `<div class="cat-badge" style="width:${size}px;height:${size}px;border-radius:${radius}px;background:${catColor(cat)};font-size:${fontSize}px">${txt}</div>`;
+}
 
 const MNAMES_SHORT=['','Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
 const MNAMES_LONG= ['','Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
@@ -620,6 +651,88 @@ function buildSparkline(values,color,w=100,h=28){
 }
 
 // ═══════════════════════════════════════════════════════════════
+// İŞYERİ ADI TEMİZLEME
+// Aracı ödeme kuruluşu öneki, referans numarası, alan adı uzantısı
+// ve taksit ekini ayıklar. Taksit bilgisi ayrı alana (tk) taşınır.
+// ═══════════════════════════════════════════════════════════════
+const NAME_PREFIX_RE=/^(iyzico|paytr|payu|param|paycore|sipay|moka|vallet|ininal|papara|craftgate|turkonay|birlesik odeme)\s*[\/|:-]\s*/i;
+
+const NAME_FIX = {
+  'g.e.':'Garanti Emeklilik',
+  'ge.':'Garanti Emeklilik',
+  'garanti bbva emeklilik':'Garanti Emeklilik',
+  'apple.com/bill':'Apple',
+  'apple.com':'Apple',
+  'google youtube member':'YouTube',
+  'google youtube':'YouTube',
+  'youtube premium':'YouTube',
+  'sigortam ne':'Sigortam.net',
+  'turkiye hayat ve emeklilik':'Türkiye Hayat Emeklilik',
+  'kk\'dan havale':'Karttan Havale',
+  'anthropic claude sub':'Anthropic',
+};
+
+function cleanName(raw){
+  let s=String(raw||'').trim();
+  if(!s) return {name:raw,tk:null};
+  let tk=null;
+
+  const mTk=s.match(/[\s(]?(\d{1,2})\s*\/\s*(\d{1,2})\)?\s*$/);
+  if(mTk&&Number(mTk[2])>1&&Number(mTk[2])<=36){
+    tk=`${Number(mTk[1])}/${Number(mTk[2])}`;
+    s=s.slice(0,mTk.index).trim();
+  }
+
+  s=s.replace(/\s*\(\s*taksit[^)]*\)\s*/ig,' ').trim();
+  s=s.replace(NAME_PREFIX_RE,'').trim();
+  s=s.replace(/\b\d{6,}[\d-]*\b/g,' ').trim();
+  s=s.replace(/[\s\-\/*.,:]+$/,'').trim();
+  s=s.replace(/\s{2,}/g,' ').trim();
+
+  const key=s.toLowerCase().replace(/\s+/g,' ').trim();
+  if(NAME_FIX[key]) return {name:NAME_FIX[key],tk};
+  for(const k in NAME_FIX){
+    if(key.startsWith(k+' ')||key.startsWith(k+'/')) return {name:NAME_FIX[k],tk};
+  }
+
+  s=s.replace(/\.(com\.tr|com|net|org|tv)$/i,'').trim();
+  if(s.length<2) return {name:raw,tk};
+  return {name:s,tk};
+}
+
+// Eski kayıtlara tek seferlik uygulanır
+const LS_KEY_CLEAN='harcama_names_v1';
+function migrateNames(){
+  if(localStorage.getItem(LS_KEY_CLEAN)) return;
+  let changed=false;
+  TX=TX.map(t=>{
+    const r=cleanName(t.name);
+    if(r.name!==t.name||(r.tk&&!t.tk)){changed=true;return{...t,name:r.name,tk:r.tk||t.tk||null};}
+    return t;
+  });
+  if(changed) saveTX(TX);
+  localStorage.setItem(LS_KEY_CLEAN,'1');
+}
+
+// Seçili dönemin adı ve kapsadığı aylar
+function selectedYMs(){
+  const q=getQuickFilteredYMs();
+  if(q) return q;
+  if(selYM!=='all') return [selYM];
+  return getPeriods();
+}
+function periodLabel(){
+  if(selQuick) return selQuick.toLowerCase();
+  if(selYM!=='all') return ymToLong(selYM);
+  return 'tüm dönem';
+}
+function txDateLabel(t){
+  const m=Number(t.ym.split('-')[1]);
+  if(typeof t.d==='number'&&t.d>=1&&t.d<=31) return `${t.d} ${MNAMES_SHORT[m]}`;
+  return ymToShort(t.ym);
+}
+
+// ═══════════════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════════════
 let TX = loadTX();
@@ -659,6 +772,7 @@ function initSetup(){
 // APP START
 // ═══════════════════════════════════════════════════════════════
 function startApp(){
+  migrateNames();
   updateTxCount();
   buildMonthStrip();
   buildQuickFilters();
@@ -754,7 +868,7 @@ function buildQuickFilters(){
     {label:'Geçen yıl', yms:periods.filter(y=>y.startsWith((new Date().getFullYear()-1).toString()))},
   ].filter(f=>f.yms&&f.yms.length>0&&f.yms.length<periods.length);
 
-  strip.innerHTML=`<button class="qf-btn${!selQuick?' active':''}" data-qf="all">Tümü</button>`+
+  strip.innerHTML=`<button class="qf-btn${(!selQuick&&selYM==='all')?' active':''}" data-qf="all">Tümü</button>`+
     filters.map(f=>`<button class="qf-btn${selQuick===f.label?' active':''}" data-qf="${f.label}" data-yms="${f.yms.join(',')}">${f.label}</button>`).join('');
 
   strip.querySelectorAll('.qf-btn').forEach(btn=>{
@@ -790,7 +904,7 @@ function buildMonthStrip(){
   const periods=getPeriods();
   const strip=document.getElementById('monthStrip');
   let lastYear='';
-  let html=`<button class="month-btn all-btn${selYM==='all'?' active':''}" data-ym="all">Tümü</button>`;
+  let html=`<button class="month-btn all-btn${(selYM==='all'&&!selQuick)?' active':''}" data-ym="all">Tümü</button>`;
   periods.forEach(ym=>{
     const yr=ymYear(ym);
     if(yr!==lastYear){if(lastYear)html+=`<span class="month-year-sep">${yr}</span>`;lastYear=yr;}
@@ -860,13 +974,18 @@ function renderDashboard(){
     sparkBiggest=sparkYMs.map(ym=>{const mt=monthTxs(ym);return mt.length?Math.max(...mt.map(t=>t.amt)):0});
   }
 
-  let delta=null;
-  if(selYM!=='all'){
+  // Tek ay seçiliyse geçen ayla karşılaştırma kartı
+  let cmp=null;
+  if(selYM!=='all'&&!selQuick){
     const idx=periods.indexOf(selYM);
     if(idx>0){
-      const cur=TX.filter(t=>t.ym===selYM&&(selCard==='all'||t.card===selCard)&&t.amt>0).reduce((s,t)=>s+t.amt,0);
-      const prv=TX.filter(t=>t.ym===periods[idx-1]&&(selCard==='all'||t.card===selCard)&&t.amt>0).reduce((s,t)=>s+t.amt,0);
-      if(prv>0)delta=((cur-prv)/prv*100);
+      const prevYM=periods[idx-1];
+      const prv=TX.filter(t=>t.ym===prevYM&&(selCard==='all'||t.card===selCard)&&t.amt>0).reduce((s,t)=>s+t.amt,0);
+      cmp={
+        label:`${MNAMES_LONG[Number(prevYM.split('-')[1])]}'a göre`,
+        diff:total-prv,
+        pct:prv>0?((total-prv)/prv*100):null
+      };
     }
   }
 
@@ -887,7 +1006,7 @@ function renderDashboard(){
     }).join('');
     return`<div class="cat-item${isOpen?' open':''}" data-ci="${i}" style="animation-delay:${i*.04}s">
       <div class="cat-header">
-        <div class="cat-icon" style="background:${catColor(b.cat)}22;color:${catColor(b.cat)}">${catIcon(b.cat)}</div>
+        ${renderCatBadge(b.cat,38)}
         <div class="cat-info">
           <div class="cat-name">${catLabel(b.cat)}</div>
           <div class="cat-count">${b.items.length} işlem</div>
@@ -907,15 +1026,21 @@ function renderDashboard(){
       <div class="kpi blue">
         <div class="kpi-label">Toplam</div>
         <div class="kpi-value" data-count="${total}" style="color:var(--accent)">${fmt(total)}</div>
-        <div class="kpi-sub">${txs.length} işlem${delta!==null?` <span class="delta ${delta>0?'up':'dn'}">${delta>0?'↑':'↓'}${Math.abs(delta).toFixed(0)}%</span>`:''}</div>
+        <div class="kpi-sub">${txs.length} işlem</div>
         ${shouldSpark?buildSparkline(sparkTotal,'#0EA5E9'):''}
       </div>
+      ${cmp?`
+      <div class="kpi orange">
+        <div class="kpi-label">${cmp.label}</div>
+        <div class="kpi-value" style="color:${cmp.diff>=0?'var(--red)':'var(--green)'}">${cmp.diff>=0?'+':'−'}${fmt(Math.abs(cmp.diff))}</div>
+        <div class="kpi-sub">${cmp.pct===null?'önceki ayda veri yok':`%${Math.abs(cmp.pct).toFixed(0)} ${cmp.diff>=0?'artış':'azalış'}`}</div>
+      </div>`:`
       <div class="kpi orange">
         <div class="kpi-label">Aylık Ort.</div>
         <div class="kpi-value" data-count="${total/nP}" style="color:var(--orange)">${fmt(total/nP)}</div>
         <div class="kpi-sub">${nP} ay</div>
         ${shouldSpark?buildSparkline(sparkTotal,'#F59E0B'):''}
-      </div>
+      </div>`}
       <div class="kpi red">
         <div class="kpi-label">En Büyük İşlem</div>
         <div class="kpi-value" data-count="${tops?tops.amt:''}" style="color:var(--red-soft)">${tops?fmt(tops.amt):'—'}</div>
@@ -1115,14 +1240,15 @@ function renderTransactions(){
     (selCard==='all'||t.card===selCard)
   ).sort((a,b)=>a.ym.localeCompare(b.ym)||b.amt-a.amt);
   const pos=txs.filter(t=>t.amt>0).reduce((s,t)=>s+t.amt,0);
+  const showCardTag=selCard==='all';
   const rows=txs.map(t=>{
     const cls=t.card==='adios'?'tx-card-adios':'tx-card-crystal';
     const lbl=t.card==='adios'?'Adios':'Crystal';
     return`<div class="tx-item" style="padding:12px 14px;background:var(--bg2)">
       ${renderMerchantLogo(t.name,40)}
       <div style="flex:1;min-width:0">
-        <div class="tx-name" style="font-size:13px">${t.name}</div>
-        <div class="tx-meta"><span class="tx-card-tag ${cls}">${lbl}</span><span>${ymToLong(t.ym)}</span><span>${catLabel(t.cat)}</span></div>
+        <div class="tx-name" style="font-size:13px">${t.name}${t.tk?` <span class="tx-tk">${t.tk}</span>`:''}</div>
+        <div class="tx-meta"><span>${txDateLabel(t)}</span><span>${catLabel(t.cat)}</span>${showCardTag?`<span class="tx-card-tag ${cls}">${lbl}</span>`:''}</div>
       </div>
       <div class="tx-amount ${t.amt<0?'neg':''}">${t.amt<0?'+ ':''}${fmt2(Math.abs(t.amt))}</div>
     </div>`;
@@ -1385,24 +1511,52 @@ function renderHeatmap(){
 // INSIGHTS
 // ═══════════════════════════════════════════════════════════════
 function renderInsights(){
-  const txs=TX.filter(t=>t.amt>0);
+  const txs=filtered();
   const total=txs.reduce((s,t)=>s+t.amt,0);
   const faiz=txs.filter(t=>t.cat==='Faiz & Ucret').reduce((s,t)=>s+t.amt,0);
   const sigorta=txs.filter(t=>t.cat==='Sigorta & Emeklilik').reduce((s,t)=>s+t.amt,0);
   const dijital=txs.filter(t=>t.cat==='Dijital & Abonelik').reduce((s,t)=>s+t.amt,0);
-  const nP=getPeriods().length||1;
+  const yms=selectedYMs();
+  const nP=yms.length||1;
+  const single=(nP===1);
+
+  // Tek ay seçiliyse faizi geçen ayla karşılaştır
+  let faizNote='';
+  if(single){
+    const periods=getPeriods();
+    const idx=periods.indexOf(yms[0]);
+    if(idx>0){
+      const prv=TX.filter(t=>t.ym===periods[idx-1]&&t.cat==='Faiz & Ucret'&&(selCard==='all'||t.card===selCard)&&t.amt>0).reduce((s,t)=>s+t.amt,0);
+      if(prv>0){
+        const d=faiz-prv;
+        faizNote=` Geçen aya göre <strong>${fmt(Math.abs(d))} ${d>=0?'artmış':'düşmüş'}</strong>.`;
+      }
+    }
+  }
+  // Çok aylı seçimlerde genel ortalamayla kıyas
+  const allPeriods=getPeriods().length||1;
+  const sigortaAvg=TX.filter(t=>t.cat==='Sigorta & Emeklilik'&&(selCard==='all'||t.card===selCard)&&t.amt>0).reduce((s,t)=>s+t.amt,0)/allPeriods;
+
+  if(!total){
+    document.getElementById('mainContent').innerHTML=`<div class="empty">${periodLabel()} için işlem yok.</div>`;
+    return;
+  }
+
   const insights=[
     faiz>0&&{icon:'🔴',color:'#EF4444',title:'Faiz Maliyeti',
-     body:`Toplam <strong>${fmt(faiz)}</strong> faiz ödendi — toplam harcamanın <strong>${((faiz/total)*100).toFixed(1)}%</strong>. Borcu dönem sonunda kapatmak bu maliyeti sıfırlar.`},
+     body:`${single?'Bu ay':'Seçili dönemde'} <strong>${fmt(faiz)}</strong> faiz ödendi — harcamanın <strong>${((faiz/total)*100).toFixed(1)}%</strong>'i.${faizNote} Borcu dönem sonunda kapatmak bu maliyeti sıfırlar.`},
     sigorta>0&&{icon:'🛡️',color:'#FB7185',title:'Sigorta Ağırlığı',
-     body:`Sigorta ve emeklilik toplamda <strong>${fmt(sigorta)}</strong>, aylık ort. <strong>${fmt(sigorta/nP)}</strong>. Bütçenin <strong>${((sigorta/total)*100).toFixed(0)}%</strong>'i.`},
+     body:`Sigorta ve emeklilik <strong>${fmt(sigorta)}</strong> — ${single?'ayın':'dönemin'} <strong>${((sigorta/total)*100).toFixed(0)}%</strong>'i.${single&&sigortaAvg>0?` Aylık ortalaman <strong>${fmt(sigortaAvg)}</strong>.`:''}`},
     dijital>0&&{icon:'📱',color:'#60A5FA',title:'Dijital Abonelikler',
-     body:`Dijital hizmetlere aylık ortalama <strong>${fmt(dijital/nP)}</strong> gidiyor. Kullanılmayan servisleri iptal etmek kolay tasarruf sağlar.`},
+     body:`Dijital hizmetlere ${single?'bu ay':'aylık ortalama'} <strong>${fmt(single?dijital:dijital/nP)}</strong> gidiyor. Kullanılmayan servisleri iptal etmek kolay tasarruf sağlar.`},
     {icon:'💡',color:'#10B981',title:'Tam Ödeme = Sıfır Faiz',
      body:`Kredi kartı dönem borcunu son ödeme tarihine kadar <strong>tamamen</strong> ödemek faizi tamamen ortadan kaldırır. Kısmi ödeme faizi durdurmaz.`},
   ].filter(Boolean);
 
   document.getElementById('mainContent').innerHTML=`
+    <div style="display:flex;align-items:center;gap:6px;padding:0 2px 2px;font-size:11px;color:var(--muted)">
+      <span>📅</span><span>${periodLabel()} için</span>
+    </div>
     <div style="display:flex;flex-direction:column;gap:10px">
       ${insights.map(ins=>`
         <div class="card" style="border-left:4px solid ${ins.color}">
@@ -1424,6 +1578,7 @@ function renderInsights(){
 function renderSettings(){
   const txCount=TX.length;
   const periods=getPeriods();
+  const activeModel=getModel();
 
   const monthRows=periods.map(ym=>{
     const n=TX.filter(t=>t.ym===ym).length;
@@ -1483,17 +1638,17 @@ function renderSettings(){
     <div style="font-size:10px;font-weight:600;color:var(--muted);letter-spacing:.7px;text-transform:uppercase;margin-bottom:8px;padding:0 2px">Analiz Modeli</div>
     <div class="settings-section">
       <div style="padding:14px 16px;display:flex;gap:8px">
-        <button class="model-opt${getModel()==='claude-opus-4-8'?' active':''}" data-model="claude-opus-4-8">
-          <div class="model-opt-name">Opus 4.8</div>
+        <button class="model-opt${activeModel==='claude-opus-5'?' active':''}" data-model="claude-opus-5">
+          <div class="model-opt-name">Opus 5</div>
           <div class="model-opt-desc">En güçlü · en isabetli</div>
         </button>
-        <button class="model-opt${getModel()==='claude-sonnet-4-6'?' active':''}" data-model="claude-sonnet-4-6">
-          <div class="model-opt-name">Sonnet 4.6</div>
+        <button class="model-opt${activeModel==='claude-sonnet-5'?' active':''}" data-model="claude-sonnet-5">
+          <div class="model-opt-name">Sonnet 5</div>
           <div class="model-opt-desc">Hızlı · ekonomik</div>
         </button>
       </div>
       <div style="padding:0 16px 14px;font-size:10px;color:var(--muted2);line-height:1.5">
-        Opus karmaşık taksit ve döviz satırlarında daha isabetli ama biraz yavaş. Sonnet hızlı ve ucuz; çoğu hesap özeti için yeterli.
+        Opus 5 karmaşık taksit ve döviz satırlarında daha isabetli ama biraz yavaş. Sonnet 5 hızlı ve ucuz; çoğu hesap özeti için yeterli.
       </div>
     </div>`;
 
@@ -1547,7 +1702,7 @@ function renderSearch(q){
       ${renderMerchantLogo(t.name,38)}
       <div style="flex:1;min-width:0">
         <div class="sr-name">${t.name}</div>
-        <div class="sr-meta">${catIcon(t.cat)} ${catLabel(t.cat)} <span class="tx-card-tag ${cls}">${t.card==='adios'?'Adios':'Crystal'}</span> ${ymToLong(t.ym)}</div>
+        <div class="sr-meta">${catLabel(t.cat)} <span class="tx-card-tag ${cls}">${t.card==='adios'?'Adios':'Crystal'}</span> ${txDateLabel(t)}</div>
       </div>
       <div class="sr-amt ${t.amt<0?'neg':''}">${t.amt<0?'+ ':''}${fmt2(Math.abs(t.amt))}</div>
     </div>`;
@@ -1669,9 +1824,10 @@ async function parsePDF(file){
 1. ym (dönem): PDF'in başındaki "Hesap Kesim Tarihi"ne bak — Son Ödeme Tarihi değil, Hesap KESİM tarihi. Örneğin "Hesap Kesim Tarihi: 24 Şubat 2026" ise ym="2026-02", "Hesap Kesim Tarihi: 20 Mart 2026" ise ym="2026-03". Bu değeri TÜM işlemler için kullan, ym belirlerken hiçbir işlemin kendi tarihine bakma.
 2. d (işlem günü): Her harcama satırının yanında bir işlem tarihi yazıyor (örn. 15.02.2026 veya 15 Şub). Bu tarihin sadece GÜN kısmını 1-31 arası sayı olarak d'ye yaz. ym'den bağımsızdır: ym hesap kesim ayı, d ise o işlemin yapıldığı gündür. Faiz, kart ücreti gibi işlem tarihi olmayan satırlar için d alanını atla (hiç ekleme).
 3. card: Kart numarasına bak. 2929 ile bitiyorsa "adios", 8199 ile bitiyorsa "crystal"
-4. name: Kısa ve temiz işyeri adı (taksit bilgisini de ekle, örn: "Allianz Sigorta 9/9")
-5. cat: Aşağıdaki listeden birini seç
-6. amt: TL tutarı (iade/iptal ise negatif)
+4. name: SADECE işyerinin bilinen kısa adı. Şunları at: aracı ödeme kuruluşu öneki (IYZICO/, PAYTR/, PARAM/, TURKONAY/ gibi), uzun referans/abonelik numaraları, ".com" ".com.tr" uzantısı, büyük harf yığını. Örnekler: "IYZICO/APSIYON.COM" → "Apsiyon", "G.E. 0000014713855-202" → "Garanti Emeklilik", "GOOGLE YOUTUBE MEMBER" → "YouTube", "TURKONAY/SIGORTAM NE" → "Sigortam.net", "APPLE.COM/BILL" → "Apple". Taksit bilgisini isme YAZMA, aşağıdaki tk alanına yaz.
+5. tk: Taksitli işlemse "2/6" biçiminde taksit bilgisi. Taksitsizse bu alanı hiç ekleme.
+6. cat: Aşağıdaki listeden birini seç
+7. amt: TL tutarı (iade/iptal ise negatif)
 
 DAHIL ET: Alışverişler, fatura ödemeleri, sigorta, faiz, kart ücreti, taksitler, nakit avans, vergi
 DAHIL ETME: "ÖNCEKİ DÖNEM HESAP ÖZETİ BORCU" satırı, ödeme girişleri (+ işaretli ÖDEME-İNTERNET BANKACILIĞI), hesap özeti erteleme çifti (aynı tutarın hem + hem - göründüğü satırlar)
@@ -1680,7 +1836,7 @@ Kategoriler:
 Sigorta & Emeklilik, Konut & Aidat, Dijital & Abonelik, Iletisim, Ulasim, Alisveris, Giyim, Seyahat, Faiz & Ucret, Nakit & Transfer, Vergi, Diger
 
 SADECE JSON array döndür, başka hiçbir şey yazma:
-[{"ym":"2026-03","d":15,"card":"adios","name":"Allianz Sigorta 9/9","cat":"Sigorta & Emeklilik","amt":2821.23}]`;
+[{"ym":"2026-03","d":15,"card":"adios","name":"Allianz Sigorta","tk":"9/9","cat":"Sigorta & Emeklilik","amt":2821.23}]`;
 
   const res=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
@@ -1704,14 +1860,18 @@ SADECE JSON array döndür, başka hiçbir şey yazma:
     throw new Error(err.error?.message||`API hatası: ${res.status}`);
   }
   const data=await res.json();
-  const text=data.content?.[0]?.text||'';
+  const text=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n');
   const clean=text.replace(/```json|```/g,'').trim();
+  const normalize=arr=>arr.map(t=>{
+    const r=cleanName(t.name);
+    return {...t,name:r.name,tk:t.tk||r.tk||null};
+  });
   try{
     const parsed=JSON.parse(clean);
-    return Array.isArray(parsed)?parsed:[];
+    return Array.isArray(parsed)?normalize(parsed):[];
   }catch{
     const match=clean.match(/\[[\s\S]*\]/);
-    if(match)return JSON.parse(match[0]);
+    if(match)return normalize(JSON.parse(match[0]));
     throw new Error('JSON parse hatası');
   }
 }
@@ -1750,6 +1910,7 @@ function bindEvents(){
       document.getElementById('searchInput').value='';
       closeDr();
       renderView();
+      document.getElementById('mainContent').scrollTop=0;
     });
   });
 
@@ -1779,6 +1940,16 @@ function bindEvents(){
   });
 
   document.getElementById('fabBtn').addEventListener('click',openUploadModal);
+
+  // Kaydırırken küçülsün, durunca geri açılsın
+  let fabTimer=null;
+  document.getElementById('mainContent').addEventListener('scroll',()=>{
+    const fab=document.getElementById('fabBtn');
+    if(!fab)return;
+    fab.classList.add('mini');
+    clearTimeout(fabTimer);
+    fabTimer=setTimeout(()=>fab.classList.remove('mini'),800);
+  },{passive:true});
   document.getElementById('modalCancel').addEventListener('click',closeUploadModal);
   document.getElementById('uploadModal').addEventListener('click',function(e){
     if(e.target===this)closeUploadModal();

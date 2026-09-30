@@ -424,15 +424,17 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 const LS_KEY   = 'harcama_tx_v2';
 const LS_KEY_K = 'harcama_api_key';
 const LS_KEY_M = 'harcama_model';
-const DEFAULT_MODEL = 'claude-opus-5';
+const DEFAULT_MODEL = 'claude-opus-5-5';
 
 // Eski model isimleri artık geçerli değil — kayıtlı seçimi otomatik yükselt
 const MODEL_MIGRATION = {
-  'claude-opus-4-8'  : 'claude-opus-5',
-  'claude-sonnet-4-6': 'claude-sonnet-5',
-  'claude-opus-4-6'  : 'claude-opus-5',
-  'claude-opus-4-5'  : 'claude-opus-5',
-  'claude-sonnet-4-5': 'claude-sonnet-5',
+  'claude-opus-5'    : 'claude-opus-5-5',
+  'claude-sonnet-5'  : 'claude-sonnet-5-5',
+  'claude-opus-4-8'  : 'claude-opus-5-5',
+  'claude-sonnet-4-6': 'claude-sonnet-5-5',
+  'claude-opus-4-6'  : 'claude-opus-5-5',
+  'claude-opus-4-5'  : 'claude-opus-5-5',
+  'claude-sonnet-4-5': 'claude-sonnet-5-5',
 };
 
 function loadTX(){ try{return JSON.parse(localStorage.getItem(LS_KEY)||'[]')}catch{return[]} }
@@ -1638,12 +1640,12 @@ function renderSettings(){
     <div style="font-size:10px;font-weight:600;color:var(--muted);letter-spacing:.7px;text-transform:uppercase;margin-bottom:8px;padding:0 2px">Analiz Modeli</div>
     <div class="settings-section">
       <div style="padding:14px 16px;display:flex;gap:8px">
-        <button class="model-opt${activeModel==='claude-opus-5'?' active':''}" data-model="claude-opus-5">
-          <div class="model-opt-name">Opus 5</div>
+        <button class="model-opt${activeModel==='claude-opus-5-5'?' active':''}" data-model="claude-opus-5-5">
+          <div class="model-opt-name">Opus 5.5</div>
           <div class="model-opt-desc">En güçlü · en isabetli</div>
         </button>
-        <button class="model-opt${activeModel==='claude-sonnet-5'?' active':''}" data-model="claude-sonnet-5">
-          <div class="model-opt-name">Sonnet 5</div>
+        <button class="model-opt${activeModel==='claude-sonnet-5-5'?' active':''}" data-model="claude-sonnet-5-5">
+          <div class="model-opt-name">Sonnet 5.5</div>
           <div class="model-opt-desc">Hızlı · ekonomik</div>
         </button>
       </div>
@@ -1770,12 +1772,17 @@ document.getElementById('parseBtn').addEventListener('click', async()=>{
 
   let allNew=[];
   let hadError=false;
+  // Analiz sürerken ekran kararmasın (iOS 16.4+)
+  let wakeLock=null;
+  try{ if('wakeLock' in navigator) wakeLock=await navigator.wakeLock.request('screen'); }catch{}
   for(let i=0;i<selectedFiles.length;i++){
     const file=selectedFiles[i];
     statusMsg.textContent=`${file.name} analiz ediliyor... (${i+1}/${selectedFiles.length})`;
     progressFill.style.width=`${(i/selectedFiles.length)*80}%`;
     try{
-      const txs=await parsePDF(file);
+      const txs=await parsePDF(file,n=>{
+        statusMsg.textContent=`${file.name} analiz ediliyor... ${n} işlem okundu (${i+1}/${selectedFiles.length})`;
+      });
       allNew=[...allNew,...txs];
       console.log(`${file.name}: ${txs.length} işlem bulundu`);
     }catch(e){
@@ -1787,6 +1794,7 @@ document.getElementById('parseBtn').addEventListener('click', async()=>{
   }
 
   progressFill.style.width='100%';
+  try{ if(wakeLock) await wakeLock.release(); }catch{}
 
   if(allNew.length){
     const existing=new Set(TX.map(t=>`${t.ym}|${t.card}|${t.name}|${t.amt}`));
@@ -1815,7 +1823,7 @@ document.getElementById('parseBtn').addEventListener('click', async()=>{
   }
 });
 
-async function parsePDF(file){
+async function parsePDF(file,onProgress){
   const base64=await fileToBase64(file);
   const key=getKey();
   const prompt=`Bu bir kredi kartı hesap özeti PDF'i. Tüm işlemleri çıkar ve JSON array olarak döndür.
@@ -1838,29 +1846,64 @@ Sigorta & Emeklilik, Konut & Aidat, Dijital & Abonelik, Iletisim, Ulasim, Alisve
 SADECE JSON array döndür, başka hiçbir şey yazma:
 [{"ym":"2026-03","d":15,"card":"adios","name":"Allianz Sigorta","tk":"9/9","cat":"Sigorta & Emeklilik","amt":2821.23}]`;
 
-  const res=await fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST',
-    headers:{
-      'Content-Type':'application/json',
-      'x-api-key':key,
-      'anthropic-version':'2023-06-01',
-      'anthropic-dangerous-direct-browser-access':'true'
-    },
-    body:JSON.stringify({
-      model:getModel(),
-      max_tokens:8000,
-      messages:[{role:'user',content:[
-        {type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},
-        {type:'text',text:prompt}
-      ]}]
-    })
-  });
+  // Streaming: model çalışırken bağlantıya sürekli veri akar,
+  // böylece iOS Safari uzun analizlerde bağlantıyı kesmez.
+  let res;
+  try{
+    res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':key,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body:JSON.stringify({
+        model:getModel(),
+        max_tokens:16000,
+        stream:true,
+        messages:[{role:'user',content:[
+          {type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},
+          {type:'text',text:prompt}
+        ]}]
+      })
+    });
+  }catch(e){
+    throw new Error('Sunucuya ulaşılamadı. VPN, iCloud Özel Geçiş veya internet bağlantısını kontrol et.');
+  }
   if(!res.ok){
     const err=await res.json().catch(()=>({}));
     throw new Error(err.error?.message||`API hatası: ${res.status}`);
   }
-  const data=await res.json();
-  const text=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n');
+
+  let text='', stopReason=null, buf='';
+  const reader=res.body.getReader();
+  const dec=new TextDecoder();
+  try{
+    while(true){
+      const {done,value}=await reader.read();
+      if(done)break;
+      buf+=dec.decode(value,{stream:true});
+      const lines=buf.split('\n');
+      buf=lines.pop();
+      for(const line of lines){
+        if(!line.startsWith('data:'))continue;
+        let ev; try{ ev=JSON.parse(line.slice(5).trim()); }catch{ continue; }
+        if(ev.type==='content_block_delta'&&ev.delta?.type==='text_delta'){
+          text+=ev.delta.text;
+          if(onProgress) onProgress((text.match(/"amt"/g)||[]).length);
+        }else if(ev.type==='message_delta'){
+          stopReason=ev.delta?.stop_reason||stopReason;
+        }else if(ev.type==='error'){
+          throw new Error(ev.error?.message||'API akış hatası');
+        }
+      }
+    }
+  }catch(e){
+    if(e instanceof TypeError) throw new Error('Bağlantı analiz sırasında koptu. Ekranı açık tutup tekrar dene.');
+    throw e;
+  }
+  if(stopReason==='max_tokens') throw new Error('Ekstre çok uzun, yanıt yarıda kesildi.');
   const clean=text.replace(/```json|```/g,'').trim();
   const normalize=arr=>arr.map(t=>{
     const r=cleanName(t.name);

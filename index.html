@@ -1240,7 +1240,7 @@ function renderTransactions(){
   const txs=TX.filter(t=>
     (qyms?qyms.includes(t.ym):(selYM==='all'||t.ym===selYM))&&
     (selCard==='all'||t.card===selCard)
-  ).sort((a,b)=>a.ym.localeCompare(b.ym)||b.amt-a.amt);
+  ).sort((a,b)=>b.amt-a.amt);  // seçili dönemin tamamı, büyükten küçüğe
   const pos=txs.filter(t=>t.amt>0).reduce((s,t)=>s+t.amt,0);
   const showCardTag=selCard==='all';
   const rows=txs.map(t=>{
